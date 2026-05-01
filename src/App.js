@@ -16,7 +16,7 @@ import {
   onSnapshot, query, orderBy, serverTimestamp, updateDoc 
 } from 'firebase/firestore';
 
-// --- PERSISTENT CONFIGURATION ---
+// --- CONFIGURATION ---
 const ADMIN_EMAIL = "chasepoore@icloud.com"; 
 
 const firebaseConfig = {
@@ -67,7 +67,7 @@ const ListView = memo(({ casinos, onOpen }) => (
     <div className="grid gap-4">
       {casinos.length === 0 ? (
         <div className="text-center py-20 text-slate-700 italic border border-slate-900 rounded-[2rem]">
-          Establishing connection to live rankings...
+          Syncing with live cloud rankings...
         </div>
       ) : (
         casinos.map((c) => (
@@ -111,22 +111,25 @@ const AdminView = memo(({ isAdmin, adminTab, setAdminTab, setView, isEditing, se
   if (!isAdmin) return <div className="text-center p-20 text-slate-500 font-black uppercase tracking-widest">Access Unauthorized</div>;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 p-4 pt-10 animate-in fade-in">
-      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem]">
-        <div className="flex gap-3">
-          <button onClick={() => setAdminTab('casinos')} className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'casinos' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 bg-slate-800'}`}>Directory</button>
-          <button onClick={() => setAdminTab('moderation')} className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'moderation' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 bg-slate-800'}`}>Reviews ({pendingReviews.length})</button>
+    <div className="max-w-6xl mx-auto space-y-8 p-4 pt-10 animate-in fade-in">
+      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-5 rounded-[2rem]">
+        <div className="flex gap-2">
+          <button onClick={() => setAdminTab('casinos')} className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'casinos' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 bg-slate-800'}`}>Directory</button>
+          <button onClick={() => setAdminTab('moderation')} className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'moderation' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 bg-slate-800'}`}>Reviews ({pendingReviews.length})</button>
         </div>
-        <button onClick={() => { setView('public'); setIsEditing(null); }} className="text-xs font-black text-indigo-400 hover:text-white uppercase tracking-widest flex items-center gap-2"><Eye size={16}/> Live Site</button>
+        <button onClick={() => { setView('public'); setIsEditing(null); }} className="text-xs font-black text-slate-500 hover:text-white uppercase tracking-widest flex items-center gap-2"><Eye size={16}/> Site</button>
       </div>
 
       {adminTab === 'casinos' ? (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-2xl">
-            <h2 className="text-2xl font-black text-white mb-8">{isEditing ? 'Modify Review' : 'Add New Listing'}</h2>
+        <div className="grid lg:grid-cols-3 gap-8 pb-20">
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl">
+            <h2 className="text-xl font-black text-white mb-8 flex items-center gap-2 uppercase tracking-tight italic">
+              {isEditing ? <Edit3 size={20} className="text-indigo-400" /> : <Plus size={20} className="text-emerald-500" />}
+              {isEditing ? 'Modify Listing' : 'New Listing'}
+            </h2>
             <form onSubmit={handleSaveCasino} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
-                <input className="w-full bg-slate-800 border-none rounded-2xl p-4 text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Casino Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                <input className="w-full bg-slate-800 border-none rounded-xl p-4 text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Casino Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                 <div className="relative">
                   <input type="file" id="logo-up" hidden onChange={async (e) => {
                     const file = e.target.files[0];
@@ -135,80 +138,89 @@ const AdminView = memo(({ isAdmin, adminTab, setAdminTab, setView, isEditing, se
                       setFormData(prev => ({ ...prev, logo: base64 }));
                     }
                   }} accept="image/*" />
-                  <label htmlFor="logo-up" className="flex items-center justify-center gap-2 w-full bg-slate-800 p-4 rounded-2xl text-slate-400 cursor-pointer hover:bg-slate-700 border border-dashed border-slate-700">
+                  <label htmlFor="logo-up" className="flex items-center justify-center gap-2 w-full bg-slate-800 p-4 rounded-xl text-slate-400 cursor-pointer hover:bg-slate-700 border border-dashed border-slate-700">
                     {formData.logo ? <CheckCircle2 size={18} className="text-emerald-500" /> : <ImageIcon size={18} />}
-                    {formData.logo ? 'Logo Ready' : 'Upload Casino Logo'}
+                    <span className="font-bold text-[10px] uppercase">{formData.logo ? 'Logo Ready' : 'Upload Logo'}</span>
                   </label>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Expert Verdict (Rich Text Editor)</label>
-                <div className="border border-slate-800 rounded-2xl overflow-hidden bg-black/30">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 italic">Expert Review Editor</label>
+                <div className="border border-slate-800 rounded-2xl overflow-hidden bg-black/40">
                   <div className="bg-slate-800 p-2 flex gap-1 border-b border-slate-700 overflow-x-auto">
                     <button type="button" onClick={() => execCmd('bold')} className="p-2 hover:bg-slate-700 rounded text-white"><Bold size={16}/></button>
                     <button type="button" onClick={() => execCmd('italic')} className="p-2 hover:bg-slate-700 rounded text-white"><Italic size={16}/></button>
-                    <button type="button" onClick={() => execCmd('formatBlock', 'H2')} className="p-2 hover:bg-slate-700 rounded text-white font-black">H2</button>
-                    <button type="button" onClick={() => execCmd('formatBlock', 'H3')} className="p-2 hover:bg-slate-700 rounded text-white font-black">H3</button>
+                    <button type="button" onClick={() => execCmd('formatBlock', 'H2')} className="p-2 hover:bg-slate-700 rounded text-white font-black text-xs">H2</button>
+                    <button type="button" onClick={() => execCmd('formatBlock', 'H3')} className="p-2 hover:bg-slate-700 rounded text-white font-black text-xs">H3</button>
                     <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-2 hover:bg-slate-700 rounded text-white"><List size={16}/></button>
                   </div>
                   <div 
                     ref={editorRef}
                     contentEditable
-                    className="p-6 min-h-[300px] text-white outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-900/50 prose prose-invert max-w-none"
+                    className="p-6 min-h-[300px] text-white outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-900/50 prose prose-invert max-w-none text-sm"
                     onBlur={(e) => setFormData(prev => ({ ...prev, description: e.target.innerHTML }))}
                   />
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
-                <input className="bg-slate-800 rounded-2xl p-4 text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Bonus Header" value={formData.bonus} onChange={e => setFormData({...formData, bonus: e.target.value})} required />
-                <input className="bg-slate-800 rounded-2xl p-4 text-indigo-400 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Affiliate Link" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} required />
+                <input className="bg-slate-800 rounded-xl p-4 text-white outline-none text-sm" placeholder="Bonus: e.g. 100% up to $500" value={formData.bonus} onChange={e => setFormData({...formData, bonus: e.target.value})} required />
+                <input className="bg-slate-800 rounded-xl p-4 text-indigo-400 font-mono text-sm outline-none" placeholder="Affiliate Link" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} required />
               </div>
 
-              <button className="w-full bg-indigo-600 py-5 rounded-2xl font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-500">
-                {isEditing ? 'Update Listing' : 'Publish to Directory'}
+              <button className="w-full bg-indigo-600 py-5 rounded-2xl font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 transition-all">
+                {isEditing ? 'Commit Updates' : 'Publish to Live Site'}
               </button>
             </form>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] overflow-hidden">
-             <div className="p-6 border-b border-slate-800 font-black text-[10px] text-slate-500 uppercase tracking-widest">Inventory Management</div>
-             {casinos.map(c => (
-               <div key={c.id} className="p-4 flex items-center justify-between border-b border-slate-800/50 hover:bg-slate-800/20">
-                 <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded bg-slate-800 overflow-hidden">{c.logo && <img src={c.logo} className="w-full h-full object-cover" alt="" />}</div>
-                   <span className="font-bold text-sm text-white">{c.name}</span>
+          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] overflow-hidden shadow-xl">
+             <div className="p-6 border-b border-slate-800 font-black text-[10px] text-slate-500 uppercase tracking-widest bg-slate-800/30 italic">Live Directory</div>
+             <div className="divide-y divide-slate-800/50 max-h-[600px] overflow-y-auto">
+               {casinos.map(c => (
+                 <div key={c.id} className="p-4 flex items-center justify-between hover:bg-slate-800/20 transition-colors">
+                   <div className="flex items-center gap-3 min-w-0">
+                     <div className="w-10 h-10 rounded-lg bg-slate-800 overflow-hidden shrink-0 border border-slate-700">
+                       {c.logo ? <img src={c.logo} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full bg-slate-700" />}
+                     </div>
+                     <span className="font-bold text-sm text-white truncate italic">{c.name}</span>
+                   </div>
+                   <div className="flex gap-1 shrink-0">
+                     <button onClick={() => { setIsEditing(c.id); setFormData(c); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="p-2 text-slate-500 hover:text-indigo-400"><Edit3 size={18}/></button>
+                     <button onClick={async () => { if(window.confirm('Delete this listing?')) await deleteDoc(doc(db, 'casinos', c.id)); }} className="p-2 text-slate-500 hover:text-rose-400"><Trash2 size={18}/></button>
+                   </div>
                  </div>
-                 <div className="flex gap-2">
-                   <button onClick={() => { setIsEditing(c.id); setFormData(c); }} className="p-2 text-slate-500 hover:text-indigo-400"><Edit3 size={18}/></button>
-                   <button onClick={async () => { if(window.confirm('Erase this listing?')) await deleteDoc(doc(db, 'casinos', c.id)); }} className="p-2 text-slate-500 hover:text-rose-400"><Trash2 size={18}/></button>
-                 </div>
-               </div>
-             ))}
+               ))}
+               {casinos.length === 0 && <p className="p-10 text-center text-slate-600 text-xs italic uppercase">Empty</p>}
+             </div>
           </div>
         </div>
       ) : (
-        <div className="grid gap-4">
-          <h2 className="text-xl font-black text-white mb-4 uppercase tracking-tighter italic">Review Moderation</h2>
-          {pendingReviews.map(r => (
-            <div key={r.id} className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] flex flex-col md:flex-row justify-between gap-6 shadow-xl">
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-black rounded-lg uppercase tracking-widest border border-indigo-500/20">{r.casinoName}</div>
-                  <div className="flex gap-0.5 text-amber-500">
-                    {[...Array(5)].map((_, i) => <Star key={i} size={12} fill={i < r.rating ? 'currentColor' : 'none'} />)}
+        <div className="grid gap-4 max-w-4xl mx-auto">
+          <h2 className="text-xl font-black text-white mb-6 uppercase tracking-tighter italic border-l-4 border-indigo-600 pl-4">Review Moderation</h2>
+          {pendingReviews.length === 0 ? (
+            <div className="p-20 text-center bg-slate-900/50 border border-slate-800 rounded-[3rem] italic text-slate-600">The queue is empty.</div>
+          ) : (
+            pendingReviews.map(r => (
+              <div key={r.id} className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] flex flex-col md:flex-row justify-between gap-6 shadow-xl">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-black rounded-lg uppercase tracking-widest border border-indigo-500/20">{r.casinoName}</div>
+                    <div className="flex gap-0.5 text-amber-500">
+                      {[...Array(5)].map((_, i) => <Star key={i} size={12} fill={i < r.rating ? 'currentColor' : 'none'} />)}
+                    </div>
                   </div>
+                  <p className="text-white font-medium italic leading-relaxed text-lg">"{r.text}"</p>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">— {r.email}</p>
                 </div>
-                <p className="text-white font-medium italic leading-relaxed text-lg">"{r.text}"</p>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">— {r.email}</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button onClick={() => approveReview(r)} className="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-black text-xs text-white uppercase tracking-widest">Approve</button>
+                  <button onClick={() => deleteReview(r)} className="bg-slate-800 hover:bg-rose-900/50 px-4 py-3 rounded-xl font-black text-xs text-white border border-slate-700 uppercase tracking-widest">Reject</button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => approveReview(r)} className="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-black text-xs text-white uppercase tracking-widest">Approve</button>
-                <button onClick={() => deleteReview(r)} className="bg-slate-800 hover:bg-rose-900/50 px-4 py-3 rounded-xl font-black text-xs text-white border border-slate-700 uppercase tracking-widest">Reject</button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
     </div>
@@ -223,7 +235,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState('casinos');
   const [selectedCasino, setSelectedCasino] = useState(null);
   const [casinos, setCasinos] = useState(() => {
-    const saved = localStorage.getItem('cp_v3_cache');
+    const saved = localStorage.getItem('cp_final_cache');
     return saved ? JSON.parse(saved) : [];
   });
   const [reviews, setReviews] = useState([]);
@@ -253,7 +265,7 @@ export default function App() {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const sorted = data.sort((a, b) => b.rating - a.rating);
       setCasinos(sorted);
-      localStorage.setItem('cp_v3_cache', JSON.stringify(sorted));
+      localStorage.setItem('cp_final_cache', JSON.stringify(sorted));
       setLoading(false);
     }, () => setLoading(false));
   }, []);
@@ -271,7 +283,10 @@ export default function App() {
     if (!isAdmin || view !== 'admin' || adminTab !== 'moderation') return;
     const unsubs = casinos.map(c => onSnapshot(collection(db, 'casinos', c.id, 'user_reviews'), (snapshot) => {
       const revs = snapshot.docs.map(doc => ({ id: doc.id, casinoId: c.id, casinoName: c.name, ...doc.data() })).filter(r => !r.isApproved);
-      setPendingReviews(prev => [...prev.filter(p => p.casinoId !== c.id), ...revs].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+      setPendingReviews(prev => {
+        const others = prev.filter(p => p.casinoId !== c.id);
+        return [...others, ...revs].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      });
     }));
     return () => unsubs.forEach(u => u());
   }, [view, adminTab, casinos, isAdmin]);
@@ -284,22 +299,22 @@ export default function App() {
     else await addDoc(collection(db, 'casinos'), payload);
     setFormData({ name: '', rating: '5', bonus: '', link: '', description: '', features: '', color: '#818cf8', logo: '' });
     setIsEditing(null);
-    setShowNotification("System Updated Successfully");
+    setShowNotification("Directory Updated Successfully");
     setTimeout(() => setShowNotification(null), 3000);
   };
 
   return (
-    <div className="min-h-screen bg-[#050608] text-slate-100 font-sans pb-10 selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#050608] text-slate-100 font-sans pb-20 selection:bg-indigo-500/30">
       <nav className="sticky top-0 z-[100] bg-[#050608]/95 backdrop-blur-md border-b border-slate-800/50 h-16 flex items-center px-6">
         <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-          <div onClick={() => { setView('public'); setSelectedCasino(null); }} className="flex items-center gap-3 cursor-pointer group">
+          <div onClick={() => { setView('public'); setAdminTab('casinos'); setSelectedCasino(null); }} className="flex items-center gap-3 cursor-pointer group">
             <div className="bg-indigo-600 p-1.5 rounded-lg text-white group-hover:scale-110 transition-transform"><ShieldCheck size={20} /></div>
             <span className="font-black text-xl tracking-tighter uppercase italic text-white">CASINOPRO</span>
           </div>
 
           <div className="flex gap-4 items-center">
             {isAdmin && <button onClick={() => setView('admin')} className="text-[10px] font-black text-indigo-400 border border-indigo-500/30 px-5 py-2 rounded-xl bg-indigo-500/5 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest">Admin</button>}
-            <button onClick={() => (user && !user.isAnonymous) ? signOut(auth) : setView('auth')} className="text-slate-500 hover:text-white transition-colors">
+            <button onClick={() => (user && !user.isAnonymous) ? signOut(auth).then(()=>window.location.reload()) : setView('auth')} className="text-slate-500 hover:text-white transition-colors">
               {(user && !user.isAnonymous) ? <LogOut size={20} /> : <User size={20} />}
             </button>
           </div>
@@ -308,8 +323,9 @@ export default function App() {
 
       <main>
         {loading && casinos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-40">
+          <div className="flex flex-col items-center justify-center p-40 space-y-4">
              <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+             <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest animate-pulse">Syncing Cloud Database...</p>
           </div>
         ) : (
           <>
@@ -319,17 +335,4 @@ export default function App() {
               <div className="max-w-4xl mx-auto p-4 pt-10 space-y-10 animate-in fade-in duration-300">
                 <button onClick={() => setView('public')} className="text-indigo-400 font-bold mb-6 flex items-center gap-2 uppercase text-[10px] tracking-widest"><ArrowLeft size={16}/> Back to Directory</button>
                 <div className="bg-slate-900 border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl">
-                   <div className="h-40 w-full bg-slate-800 relative overflow-hidden">
-                     {selectedCasino.logo && <img src={selectedCasino.logo} className="absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl scale-110" alt="" />}
-                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-                   </div>
-                   <div className="px-10 pb-10 -mt-16 relative z-10">
-                     <div className="flex flex-col md:flex-row items-end gap-6 mb-8">
-                       <div className="w-32 h-32 rounded-3xl overflow-hidden bg-slate-800 border-4 border-slate-900 shadow-2xl">
-                         {selectedCasino.logo ? <img src={selectedCasino.logo} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full bg-indigo-600 flex items-center justify-center text-4xl font-black text-white">{selectedCasino.name.charAt(0)}</div>}
-                       </div>
-                       <div className="flex-1 pb-1">
-                         <h1 className="text-4xl font-black text-white tracking-tight">{selectedCasino.name}</h1>
-                         <p className="text-indigo-400 font-bold text-xs uppercase tracking-[0.2em] mt-1 flex items-center gap-2"><CheckCircle2 size={14}/> Verified Expert Review</p>
-                       </div>
-        
+                   <div className="h-40 w-full bg-slate-800 relative
