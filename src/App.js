@@ -14,14 +14,14 @@ import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, q
 const ADMIN_EMAIL = "chasepoore@icloud.com"; 
 
 const firebaseConfig = {
-  api  apiKey: "AIzaSyCwkztsGABPEjWOkNoNHr8XZ7GmlrGCf60",
+  apiKey: "AIzaSyCwkztsGABPEjWOkNoNHr8XZ7GmlrGCf60",
   authDomain: "casinopro-directory.firebaseapp.com",
   projectId: "casinopro-directory",
   storageBucket: "casinopro-directory.appspot.com",
   messagingSenderId: "500565041910",
   appId: "1:500565041910:web:323f83d280efe36da442d7"
 };
-};
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
