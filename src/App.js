@@ -20,12 +20,12 @@ const ADMIN_EMAIL = "chasepoore@icloud.com";
 
 // PASTE YOUR ACTUAL FIREBASE CONFIG HERE FROM PROJECT SETTINGS
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCwkztsGABPEjWOkNoNHr8XZ7GmlrGCf60",
+  authDomain: "casinopro-directory.firebaseapp.com",
+  projectId: "casinopro-directory",
+  storageBucket: "casinopro-directory.appspot.com",
+  messagingSenderId: "500565041910",
+  appId: "1:500565041910:web:323f83d280efe36da442d7"
 };
 
 const app = initializeApp(firebaseConfig);
