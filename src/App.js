@@ -268,4 +268,30 @@ export default function App() {
                     {pendingReviews.map(r => (
                       <div key={r.id} className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] flex flex-col md:flex-row justify-between gap-10 shadow-2xl animate-in zoom-in-95">
                         <div className="flex-1 space-y-4"><p className="text-white text-lg font-medium italic leading-relaxed">"{r.text}"</p><p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">— {r.email} ({r.casinoName})</p></div>
-                        <div className="flex items-center gap-4 shrink-0"><button onClick={async () => await updateDoc(doc(db, 'casinos', r.casinoId, 'user_reviews', r.id), { isApproved: true })} className="bg-emerald-600 px-8 py-4 rounded-2xl font-black text-xs text-white uppercase shadow-lg shadow-emerald-600/20 transition-all">Approve</button><button onClick
+                        <div className="flex items-center gap-4 shrink-0"><button onClick={async () => await updateDoc(doc(db, 'casinos', r.casinoId, 'user_reviews', r.id), { isApproved: true })} className="bg-emerald-600 px-8 py-4 rounded-2xl font-black text-xs text-white uppercase shadow-lg shadow-emerald-600/20 transition-all">Approve</button><button onClick={async () => await deleteDoc(doc(db, 'casinos', r.casinoId, 'user_reviews', r.id))} className="bg-slate-800 px-6 py-4 rounded-2xl font-black text-xs text-white border border-slate-700 uppercase transition-all">Reject</button></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* VIEW: AUTH */}
+            {view === 'auth' && (
+              <div className="max-w-md mx-auto mt-20 p-12 bg-slate-900 border border-slate-800 rounded-[3.5rem] shadow-2xl animate-in zoom-in-95">
+                <div className="text-center mb-10"><div className="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-indigo-600/30 mb-6 font-black text-white text-3xl italic">CP</div><h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">{isSignUp ? 'REGISTER' : 'LOGIN'}</h2></div>
+                <form onSubmit={async e => { e.preventDefault(); try { if (isSignUp) await createUserWithEmailAndPassword(auth, authEmail, authPass); else await signInWithEmailAndPassword(auth, authEmail, authPass); setView('public'); } catch (err) { alert(err.message); } }} className="space-y-4">
+                  <input className="w-full bg-slate-800 border-none rounded-2xl p-5 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-bold italic" placeholder="Email Address" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} required />
+                  <input className="w-full bg-slate-800 border-none rounded-2xl p-5 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-bold italic" type="password" placeholder="Password" value={authPass} onChange={e=>setAuthPass(e.target.value)} required />
+                  <button className="w-full bg-indigo-600 py-5 rounded-3xl font-black text-white uppercase shadow-xl hover:bg-indigo-500 transition-all">CONTINUE</button>
+                </form>
+                <button onClick={()=>setIsSignUp(!isSignUp)} className="w-full mt-8 text-[10px] font-black text-slate-500 uppercase tracking-widest underline decoration-slate-800 underline-offset-8">{isSignUp ? 'Login' : 'Sign Up'}</button>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+      {notif && <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-indigo-600 px-8 py-4 rounded-3xl font-black text-white shadow-2xl z-[1000] text-xs uppercase tracking-widest animate-in slide-in-from-bottom-6">{notif}</div>}
+    </div>
+  );
+}
