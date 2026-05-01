@@ -21,7 +21,7 @@ const ADMIN_EMAIL = "chasepoore@icloud.com";
 
 // !!! IMPORTANT: Replace these with your actual keys from the Firebase Console !!!
 const firebaseConfig = {
-  apiKey: "AIzaSyCwkztsGABPEjWOkNoNHr8XZ7GmlrGCf60",
+   apiKey: "AIzaSyCwkztsGABPEjWOkNoNHr8XZ7GmlrGCf60",
   authDomain: "casinopro-directory.firebaseapp.com",
   projectId: "casinopro-directory",
   storageBucket: "casinopro-directory.appspot.com",
