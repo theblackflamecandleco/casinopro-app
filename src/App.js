@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Eye, LogOut, TrendingUp, CheckCircle2, 
   AlertCircle, Zap, Crown, MessageSquare, User, ArrowLeft, Send,
   ShieldAlert, ThumbsUp, XCircle, Clock, Image as ImageIcon,
-  Bold, Italic, List, Heading1, Heading2
+  Bold, Italic, List, Heading1, Heading2, Type
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -13,13 +13,12 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, collection, doc, setDoc, addDoc, deleteDoc, 
-  onSnapshot, query, orderBy, serverTimestamp, updateDoc, enableIndexedDbPersistence 
+  onSnapshot, query, orderBy, serverTimestamp, updateDoc 
 } from 'firebase/firestore';
 
-// --- CONFIGURATION ---
+// --- PERSISTENT CONFIGURATION ---
 const ADMIN_EMAIL = "chasepoore@icloud.com"; 
 
-// !!! PASTE YOUR FIREBASE KEYS HERE !!!
 const firebaseConfig = {
   apiKey: "AIzaSyCwkztsGABPEjWOkNoNHr8XZ7GmlrGCf60",
   authDomain: "casinopro-directory.firebaseapp.com",
@@ -33,174 +32,304 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-try {
-  enableIndexedDbPersistence(db).catch(() => {});
-} catch (e) {}
+// --- IMAGE OPTIMIZER ---
+const optimizeImage = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 400;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+    };
+  });
+};
 
-// --- UI COMPONENTS ---
+// --- STABLE COMPONENTS (Fixed outside App to ensure focus/speed) ---
 
-const ListView = ({ casinos, onOpen }) => (
-  <div className="max-w-5xl mx-auto space-y-6 p-4 pt-6">
+const ListView = memo(({ casinos, onOpen }) => (
+  <div className="max-w-5xl mx-auto space-y-6 p-4 pt-10 animate-in fade-in duration-300">
     <div className="text-center py-10">
-      <h1 className="text-5xl font-black mb-2 text-white italic tracking-tighter">CASINO<span className="text-indigo-500">PRO</span></h1>
-      <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">Elite Directory & Reviews</p>
+      <h1 className="text-5xl font-black mb-4 text-white tracking-tighter italic uppercase">
+        Casino<span className="text-indigo-500">Pro</span>
+      </h1>
+      <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">Official 2026 Rankings</p>
     </div>
     <div className="grid gap-4">
-      {casinos.map((c) => (
-        <div key={c.id} onClick={() => onOpen(c)} className="bg-slate-900/60 border border-slate-800 p-5 rounded-[2rem] flex items-center gap-5 hover:border-indigo-500/50 transition-all active:scale-95">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
-            {c.logo ? <img src={c.logo} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-xl font-black bg-indigo-600 text-white">{c.name.charAt(0)}</div>}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold text-white truncate">{c.name}</h3>
-            <div className="flex items-center gap-1.5 mt-1">
-              <Star size={12} className="text-amber-400 fill-amber-400" />
-              <span className="text-[10px] font-black text-slate-500 uppercase">{c.rating} Expert Rating</span>
-            </div>
-          </div>
-          <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest">View</button>
+      {casinos.length === 0 ? (
+        <div className="text-center py-20 text-slate-700 italic border border-slate-900 rounded-[2rem]">
+          Establishing connection to live rankings...
         </div>
-      ))}
+      ) : (
+        casinos.map((c) => (
+          <div 
+            key={c.id} 
+            onClick={() => onOpen(c)} 
+            className="group cursor-pointer bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-5 flex items-center gap-5 hover:border-indigo-500/50 transition-all hover:bg-slate-900/80 active:scale-[0.98] shadow-xl"
+          >
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+              {c.logo ? <img src={c.logo} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-xl font-black bg-indigo-600 text-white">{c.name.charAt(0)}</div>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xl font-bold text-white truncate">{c.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <Star size={12} className="text-amber-400 fill-amber-400" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{c.rating} Expert Rating</span>
+              </div>
+            </div>
+            <button className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Review</button>
+          </div>
+        ))
+      )}
     </div>
   </div>
-);
+));
 
-// --- MAIN APP ---
+const AdminView = memo(({ isAdmin, adminTab, setAdminTab, setView, isEditing, setIsEditing, formData, setFormData, handleSaveCasino, casinos, pendingReviews, approveReview, deleteReview }) => {
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current && isEditing) {
+      editorRef.current.innerHTML = formData.description || "";
+    }
+  }, [isEditing]);
+
+  const execCmd = (cmd, val = null) => {
+    document.execCommand(cmd, false, val);
+    setFormData(prev => ({ ...prev, description: editorRef.current.innerHTML }));
+  };
+
+  if (!isAdmin) return <div className="text-center p-20 text-slate-500 font-black uppercase tracking-widest">Access Unauthorized</div>;
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-10 p-4 pt-10 animate-in fade-in">
+      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem]">
+        <div className="flex gap-3">
+          <button onClick={() => setAdminTab('casinos')} className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'casinos' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 bg-slate-800'}`}>Directory</button>
+          <button onClick={() => setAdminTab('moderation')} className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${adminTab === 'moderation' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-500 bg-slate-800'}`}>Reviews ({pendingReviews.length})</button>
+        </div>
+        <button onClick={() => { setView('public'); setIsEditing(null); }} className="text-xs font-black text-indigo-400 hover:text-white uppercase tracking-widest flex items-center gap-2"><Eye size={16}/> Live Site</button>
+      </div>
+
+      {adminTab === 'casinos' ? (
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-2xl">
+            <h2 className="text-2xl font-black text-white mb-8">{isEditing ? 'Modify Review' : 'Add New Listing'}</h2>
+            <form onSubmit={handleSaveCasino} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <input className="w-full bg-slate-800 border-none rounded-2xl p-4 text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Casino Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                <div className="relative">
+                  <input type="file" id="logo-up" hidden onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const base64 = await optimizeImage(file);
+                      setFormData(prev => ({ ...prev, logo: base64 }));
+                    }
+                  }} accept="image/*" />
+                  <label htmlFor="logo-up" className="flex items-center justify-center gap-2 w-full bg-slate-800 p-4 rounded-2xl text-slate-400 cursor-pointer hover:bg-slate-700 border border-dashed border-slate-700">
+                    {formData.logo ? <CheckCircle2 size={18} className="text-emerald-500" /> : <ImageIcon size={18} />}
+                    {formData.logo ? 'Logo Ready' : 'Upload Casino Logo'}
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Expert Verdict (Rich Text Editor)</label>
+                <div className="border border-slate-800 rounded-2xl overflow-hidden bg-black/30">
+                  <div className="bg-slate-800 p-2 flex gap-1 border-b border-slate-700 overflow-x-auto">
+                    <button type="button" onClick={() => execCmd('bold')} className="p-2 hover:bg-slate-700 rounded text-white"><Bold size={16}/></button>
+                    <button type="button" onClick={() => execCmd('italic')} className="p-2 hover:bg-slate-700 rounded text-white"><Italic size={16}/></button>
+                    <button type="button" onClick={() => execCmd('formatBlock', 'H2')} className="p-2 hover:bg-slate-700 rounded text-white font-black">H2</button>
+                    <button type="button" onClick={() => execCmd('formatBlock', 'H3')} className="p-2 hover:bg-slate-700 rounded text-white font-black">H3</button>
+                    <button type="button" onClick={() => execCmd('insertUnorderedList')} className="p-2 hover:bg-slate-700 rounded text-white"><List size={16}/></button>
+                  </div>
+                  <div 
+                    ref={editorRef}
+                    contentEditable
+                    className="p-6 min-h-[300px] text-white outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-900/50 prose prose-invert max-w-none"
+                    onBlur={(e) => setFormData(prev => ({ ...prev, description: e.target.innerHTML }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <input className="bg-slate-800 rounded-2xl p-4 text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Bonus Header" value={formData.bonus} onChange={e => setFormData({...formData, bonus: e.target.value})} required />
+                <input className="bg-slate-800 rounded-2xl p-4 text-indigo-400 font-mono text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Affiliate Link" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} required />
+              </div>
+
+              <button className="w-full bg-indigo-600 py-5 rounded-2xl font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-500">
+                {isEditing ? 'Update Listing' : 'Publish to Directory'}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] overflow-hidden">
+             <div className="p-6 border-b border-slate-800 font-black text-[10px] text-slate-500 uppercase tracking-widest">Inventory Management</div>
+             {casinos.map(c => (
+               <div key={c.id} className="p-4 flex items-center justify-between border-b border-slate-800/50 hover:bg-slate-800/20">
+                 <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded bg-slate-800 overflow-hidden">{c.logo && <img src={c.logo} className="w-full h-full object-cover" alt="" />}</div>
+                   <span className="font-bold text-sm text-white">{c.name}</span>
+                 </div>
+                 <div className="flex gap-2">
+                   <button onClick={() => { setIsEditing(c.id); setFormData(c); }} className="p-2 text-slate-500 hover:text-indigo-400"><Edit3 size={18}/></button>
+                   <button onClick={async () => { if(window.confirm('Erase this listing?')) await deleteDoc(doc(db, 'casinos', c.id)); }} className="p-2 text-slate-500 hover:text-rose-400"><Trash2 size={18}/></button>
+                 </div>
+               </div>
+             ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          <h2 className="text-xl font-black text-white mb-4 uppercase tracking-tighter italic">Review Moderation</h2>
+          {pendingReviews.map(r => (
+            <div key={r.id} className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] flex flex-col md:flex-row justify-between gap-6 shadow-xl">
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-black rounded-lg uppercase tracking-widest border border-indigo-500/20">{r.casinoName}</div>
+                  <div className="flex gap-0.5 text-amber-500">
+                    {[...Array(5)].map((_, i) => <Star key={i} size={12} fill={i < r.rating ? 'currentColor' : 'none'} />)}
+                  </div>
+                </div>
+                <p className="text-white font-medium italic leading-relaxed text-lg">"{r.text}"</p>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">— {r.email}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => approveReview(r)} className="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-black text-xs text-white uppercase tracking-widest">Approve</button>
+                <button onClick={() => deleteReview(r)} className="bg-slate-800 hover:bg-rose-900/50 px-4 py-3 rounded-xl font-black text-xs text-white border border-slate-700 uppercase tracking-widest">Reject</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// --- MAIN APPLICATION ENGINE ---
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('public');
   const [adminTab, setAdminTab] = useState('casinos');
   const [selectedCasino, setSelectedCasino] = useState(null);
-  const [casinos, setCasinos] = useState([]);
+  const [casinos, setCasinos] = useState(() => {
+    const saved = localStorage.getItem('cp_v3_cache');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [reviews, setReviews] = useState([]);
   const [pendingReviews, setPendingReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(casinos.length === 0);
   const [authEmail, setAuthEmail] = useState('');
   const [authPass, setAuthPass] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({ name: '', rating: '5', bonus: '', link: '', description: '', logo: '' });
+  const [isEditing, setIsEditing] = useState(null);
+  const [formData, setFormData] = useState({ name: '', rating: '5', bonus: '', link: '', description: '', features: '', color: '#818cf8', logo: '' });
   const [newReview, setNewReview] = useState({ rating: 5, text: '' });
+  const [showNotification, setShowNotification] = useState(null);
 
-  // Auth Listener
+  const isAdmin = user && user.email === ADMIN_EMAIL;
+
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (!u) signInAnonymously(auth);
     });
+    return () => unsub();
   }, []);
 
-  // Data Listener
   useEffect(() => {
-    return onSnapshot(collection(db, 'casinos'), (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setCasinos(data.sort((a, b) => b.rating - a.rating));
+    const q = collection(db, 'casinos');
+    return onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const sorted = data.sort((a, b) => b.rating - a.rating);
+      setCasinos(sorted);
+      localStorage.setItem('cp_v3_cache', JSON.stringify(sorted));
       setLoading(false);
     }, () => setLoading(false));
   }, []);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    setView('public');
-    window.location.reload(); // Force refresh to clear state
+  useEffect(() => {
+    if (!selectedCasino || view !== 'details') return;
+    const q = query(collection(db, 'casinos', selectedCasino.id, 'user_reviews'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snapshot) => {
+      const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setReviews(all.filter(r => r.isApproved === true));
+    });
+  }, [selectedCasino, view]);
+
+  useEffect(() => {
+    if (!isAdmin || view !== 'admin' || adminTab !== 'moderation') return;
+    const unsubs = casinos.map(c => onSnapshot(collection(db, 'casinos', c.id, 'user_reviews'), (snapshot) => {
+      const revs = snapshot.docs.map(doc => ({ id: doc.id, casinoId: c.id, casinoName: c.name, ...doc.data() })).filter(r => !r.isApproved);
+      setPendingReviews(prev => [...prev.filter(p => p.casinoId !== c.id), ...revs].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+    }));
+    return () => unsubs.forEach(u => u());
+  }, [view, adminTab, casinos, isAdmin]);
+
+  const handleSaveCasino = async (e) => {
+    e.preventDefault();
+    if (!isAdmin) return;
+    const payload = { ...formData, updatedAt: Date.now() };
+    if (isEditing) await setDoc(doc(db, 'casinos', isEditing), payload);
+    else await addDoc(collection(db, 'casinos'), payload);
+    setFormData({ name: '', rating: '5', bonus: '', link: '', description: '', features: '', color: '#818cf8', logo: '' });
+    setIsEditing(null);
+    setShowNotification("System Updated Successfully");
+    setTimeout(() => setShowNotification(null), 3000);
   };
 
-  const isAdmin = user && user.email === ADMIN_EMAIL;
-
   return (
-    <div className="min-h-screen bg-[#050608] text-slate-100 font-sans pb-10">
-      {/* HEADER - ALWAYS VISIBLE */}
-      <nav className="sticky top-0 z-[100] bg-[#050608] border-b border-slate-800 h-20 flex items-center px-6">
+    <div className="min-h-screen bg-[#050608] text-slate-100 font-sans pb-10 selection:bg-indigo-500/30">
+      <nav className="sticky top-0 z-[100] bg-[#050608]/95 backdrop-blur-md border-b border-slate-800/50 h-16 flex items-center px-6">
         <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
-          <div onClick={() => setView('public')} className="flex items-center gap-3 cursor-pointer">
-            <div className="bg-indigo-600 p-2 rounded-xl text-white"><ShieldCheck size={24} /></div>
-            <span className="font-black text-xl tracking-tighter uppercase italic text-white hidden sm:block">CASINOPRO</span>
+          <div onClick={() => { setView('public'); setSelectedCasino(null); }} className="flex items-center gap-3 cursor-pointer group">
+            <div className="bg-indigo-600 p-1.5 rounded-lg text-white group-hover:scale-110 transition-transform"><ShieldCheck size={20} /></div>
+            <span className="font-black text-xl tracking-tighter uppercase italic text-white">CASINOPRO</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* ADMIN BUTTON - Only shows for your email */}
-            {isAdmin && (
-              <button 
-                onClick={() => setView('admin')} 
-                className="bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest"
-              >
-                Admin Panel
-              </button>
-            )}
-
-            {/* LOGIN/LOGOUT LOGIC */}
-            {(!user || user.isAnonymous) ? (
-              <button 
-                onClick={() => setView('auth')} 
-                className="bg-white text-black px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-white/5"
-              >
-                Login / Join
-              </button>
-            ) : (
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-bold text-slate-500 uppercase hidden md:block">{user.email}</span>
-                <button 
-                  onClick={handleLogout} 
-                  className="bg-slate-800 text-rose-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-700"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+          <div className="flex gap-4 items-center">
+            {isAdmin && <button onClick={() => setView('admin')} className="text-[10px] font-black text-indigo-400 border border-indigo-500/30 px-5 py-2 rounded-xl bg-indigo-500/5 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest">Admin</button>}
+            <button onClick={() => (user && !user.isAnonymous) ? signOut(auth) : setView('auth')} className="text-slate-500 hover:text-white transition-colors">
+              {(user && !user.isAnonymous) ? <LogOut size={20} /> : <User size={20} />}
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* CONTENT AREA */}
       <main>
         {loading && casinos.length === 0 ? (
-          <div className="flex justify-center p-40">
-            <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex flex-col items-center justify-center p-40">
+             <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
           <>
-            {view === 'public' && <ListView casinos={casinos} onOpen={(c) => { setSelectedCasino(c); setView('details'); }} />}
+            {view === 'public' && <ListView casinos={casinos} onOpen={(c) => { setSelectedCasino(c); setView('details'); window.scrollTo(0,0); }} />}
             
-            {view === 'auth' && (
-              <div className="max-w-md mx-auto mt-20 p-10 bg-slate-900 border border-slate-800 rounded-[3rem]">
-                <h2 className="text-2xl font-black text-center mb-8 uppercase text-white">{isSignUp ? 'Create Profile' : 'Member Login'}</h2>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    if (isSignUp) await createUserWithEmailAndPassword(auth, authEmail, authPass);
-                    else await signInWithEmailAndPassword(auth, authEmail, authPass);
-                    setView('public');
-                  } catch (err) { alert(err.message); }
-                }} className="space-y-4">
-                  <input className="w-full bg-slate-800 rounded-2xl p-5 text-white outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Email Address" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} required />
-                  <input className="w-full bg-slate-800 rounded-2xl p-5 text-white outline-none focus:ring-2 focus:ring-indigo-500" type="password" placeholder="Password" value={authPass} onChange={e=>setAuthPass(e.target.value)} required />
-                  <button className="w-full bg-indigo-600 py-5 rounded-2xl font-black text-white uppercase tracking-widest">Continue</button>
-                </form>
-                <button onClick={() => setIsSignUp(!isSignUp)} className="w-full mt-6 text-xs font-bold text-slate-500 uppercase">{isSignUp ? 'Already a member? Log In' : 'Need an account? Sign Up'}</button>
-              </div>
-            )}
-
-            {view === 'admin' && isAdmin && (
-              <div className="max-w-5xl mx-auto p-4 pt-10">
-                <h1 className="text-3xl font-black mb-10 text-white uppercase">Management Dashboard</h1>
-                {/* (Admin Tabs and Forms go here - simplified for speed) */}
-                <p className="text-slate-500 italic">Admin forms enabled for {user.email}</p>
-                <button onClick={() => setView('public')} className="mt-4 bg-indigo-600 px-6 py-2 rounded-lg">Back to Site</button>
-              </div>
-            )}
-
-            {/* Details View skeleton if selected */}
             {view === 'details' && selectedCasino && (
-               <div className="max-w-4xl mx-auto p-4 pt-10">
-                 <button onClick={() => setView('public')} className="text-indigo-400 font-bold mb-6 flex items-center gap-2"><ArrowLeft size={16}/> Back</button>
-                 <h1 className="text-4xl font-black text-white mb-4">{selectedCasino.name}</h1>
-                 <div className="prose prose-invert max-w-none text-slate-300" dangerouslySetInnerHTML={{ __html: selectedCasino.description }} />
-                 <a href={selectedCasino.link} target="_blank" rel="noreferrer" className="inline-block mt-8 bg-indigo-600 px-10 py-4 rounded-2xl font-black text-white">PLAY NOW</a>
-               </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
-  );
-            }
+              <div className="max-w-4xl mx-auto p-4 pt-10 space-y-10 animate-in fade-in duration-300">
+                <button onClick={() => setView('public')} className="text-indigo-400 font-bold mb-6 flex items-center gap-2 uppercase text-[10px] tracking-widest"><ArrowLeft size={16}/> Back to Directory</button>
+                <div className="bg-slate-900 border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl">
+                   <div className="h-40 w-full bg-slate-800 relative overflow-hidden">
+                     {selectedCasino.logo && <img src={selectedCasino.logo} className="absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl scale-110" alt="" />}
+                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                   </div>
+                   <div className="px-10 pb-10 -mt-16 relative z-10">
+                     <div className="flex flex-col md:flex-row items-end gap-6 mb-8">
+                       <div className="w-32 h-32 rounded-3xl overflow-hidden bg-slate-800 border-4 border-slate-900 shadow-2xl">
+                         {selectedCasino.logo ? <img src={selectedCasino.logo} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full bg-indigo-600 flex items-center justify-center text-4xl font-black text-white">{selectedCasino.name.charAt(0)}</div>}
+                       </div>
+                       <div className="flex-1 pb-1">
+                         <h1 className="text-4xl font-black text-white tracking-tight">{selectedCasino.name}</h1>
+                         <p className="text-indigo-400 font-bold text-xs uppercase tracking-[0.2em] mt-1 flex items-center gap-2"><CheckCircle2 size={14}/> Verified Expert Review</p>
+                       </div>
+        
